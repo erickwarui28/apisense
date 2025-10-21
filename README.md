@@ -5,6 +5,28 @@
 
 APISense is an AI-powered API recommendation system that leverages **Elasticsearch** and **Google Gemini AI** to intelligently match developers and startups with the right APIs for their specific use cases.
 
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Tech Stack](#️-tech-stack)
+- [Quick Start](#-quick-start)
+- [Prerequisites](#-prerequisites)
+- [Installation](#-installation)
+  - [System Requirements](#system-requirements-check)
+  - [Database Setup](#6-database-setup)
+  - [File Permissions](#5-set-file-permissions)
+  - [Troubleshooting](#troubleshooting-common-issues)
+- [Elasticsearch Setup](#-elasticsearch-cloud-setup)
+- [Gemini API Setup](#-google-gemini-api-setup)
+- [Database Schema](#-database-schema)
+- [Usage](#-usage)
+- [API Endpoints](#-api-endpoints)
+- [Testing the Application](#-testing-the-application)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Support](#-support)
+
 ## 🚀 Features
 
 - 🔍 **Natural-Language API Discovery** — Describe your project needs like *"I need APIs for a travel booking app with real-time pricing"*
@@ -27,6 +49,43 @@ APISense is an AI-powered API recommendation system that leverages **Elasticsear
 | **Frontend** | Laravel Blade + TailwindCSS + Alpine.js |
 | **Authentication** | Laravel Breeze |
 
+## ⚡ Quick Start
+
+Get APISense running locally in under 5 minutes:
+
+```bash
+# 1. Clone and enter directory
+git clone https://github.com/erickwarui28/apisense.git
+cd apisense
+
+# 2. Install dependencies
+composer install
+npm install
+
+# 3. Setup environment
+cp .env.example .env
+php artisan key:generate
+
+# 4. Create MySQL database
+mysql -u root -p -e "CREATE DATABASE apisense CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# 5. Update .env with database credentials
+# DB_CONNECTION=mysql
+# DB_DATABASE=apisense
+# DB_USERNAME=root
+# DB_PASSWORD=your_password
+
+# 6. Run migrations and seed data
+php artisan migrate
+php artisan db:seed
+
+# 7. Build assets and start server
+npm run build
+php artisan serve
+```
+
+**Important:** You'll need to configure Elasticsearch and Gemini API keys in `.env` for full functionality. See detailed setup instructions below.
+
 ## 📋 Prerequisites
 
 - PHP 8.3+
@@ -37,6 +96,25 @@ APISense is an AI-powered API recommendation system that leverages **Elasticsear
 - Google AI Studio account (for Gemini API)
 
 ## 🚀 Installation
+
+### System Requirements Check
+
+Before starting, verify that your system meets all prerequisites:
+
+```bash
+# Check PHP version (must be 8.3+)
+php -v
+
+# Check Composer installation
+composer -V
+
+# Check Node.js and NPM
+node -v
+npm -v
+
+# Check MySQL installation
+mysql --version
+```
 
 ### 1. Clone the Repository
 
@@ -55,12 +133,24 @@ composer install
 npm install
 ```
 
+**Note:** If you encounter any Composer dependency issues, try:
+```bash
+composer install --ignore-platform-reqs
+```
+
 ### 3. Environment Configuration
 
 Copy the `.env.example` file and configure your environment:
 
 ```bash
+# On Linux/macOS
 cp .env.example .env
+
+# On Windows (PowerShell)
+Copy-Item .env.example .env
+
+# On Windows (Command Prompt)
+copy .env.example .env
 ```
 
 Update the following variables in your `.env` file:
@@ -70,15 +160,16 @@ Update the following variables in your `.env` file:
 APP_NAME=APISense
 APP_ENV=local
 APP_DEBUG=true
-APP_URL=http://localhost
+APP_URL=http://localhost:8000
+APP_TIMEZONE=UTC
 
-# Database
+# Database Configuration
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=apisense
 DB_USERNAME=root
-DB_PASSWORD=
+DB_PASSWORD=your_password
 
 # Elasticsearch Configuration
 ELASTICSEARCH_HOST=https://your-elastic-instance
@@ -88,6 +179,19 @@ ELASTICSEARCH_INDEX_PREFIX=apisense
 # Gemini API Configuration
 GEMINI_API_KEY=your-gemini-api-key
 GEMINI_MODEL=gemini-1.5-pro
+GEMINI_API_ENDPOINT=https://generativelanguage.googleapis.com/v1beta
+
+# Session & Cache
+SESSION_DRIVER=file
+CACHE_STORE=file
+
+# Queue Configuration (use 'database' for production)
+QUEUE_CONNECTION=sync
+
+# Mail Configuration (optional)
+MAIL_MAILER=smtp
+MAIL_HOST=mailhog
+MAIL_PORT=1025
 ```
 
 ### 4. Generate Application Key
@@ -96,29 +200,155 @@ GEMINI_MODEL=gemini-1.5-pro
 php artisan key:generate
 ```
 
-### 5. Database Setup
+### 5. Set File Permissions
 
+**On Linux/macOS:**
 ```bash
-# Run migrations
-php artisan migrate
+chmod -R 775 storage bootstrap/cache
+chown -R $USER:www-data storage bootstrap/cache
+```
 
-# Seed the database with sample API data
+**On Windows:**
+```powershell
+# Ensure the storage and bootstrap/cache directories are writable
+icacls storage /grant Everyone:F /T
+icacls bootstrap\cache /grant Everyone:F /T
+```
+
+### 6. Database Setup
+
+#### Create MySQL Database
+
+1. Create the database using MySQL command:
+```sql
+CREATE DATABASE apisense CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Or use the provided SQL file:
+```bash
+mysql -u root -p < create-database.sql
+```
+
+Or create it directly from command line:
+```bash
+mysql -u root -p -e "CREATE DATABASE apisense CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+2. Verify your `.env` database configuration:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=apisense
+DB_USERNAME=root
+DB_PASSWORD=your_password
+```
+
+3. Run migrations:
+```bash
+php artisan migrate
+```
+
+4. Seed the database with sample data:
+```bash
+# Seed all tables
+php artisan db:seed
+
+# Or seed specific table
 php artisan db:seed --class=ApiRepositorySeeder
 ```
 
-### 6. Build Frontend Assets
+### 7. Build Frontend Assets
 
+Build the production assets:
 ```bash
 npm run build
 ```
 
-### 7. Start the Development Server
+### 8. Initialize Elasticsearch Index
+
+Create the Elasticsearch index for API search:
 
 ```bash
+php artisan tinker
+```
+
+Then run in the tinker console:
+```php
+use App\Services\ElasticsearchService;
+
+$elasticsearch = app(ElasticsearchService::class);
+
+// Create the APIs index
+if (!$elasticsearch->indexExists('apis')) {
+    $elasticsearch->createIndex('apis');
+    echo "✓ Index created successfully!\n";
+} else {
+    echo "✓ Index already exists!\n";
+}
+
+// Index sample API data
+$apiCount = DB::table('api_repositories')->count();
+echo "Found {$apiCount} APIs in database to index.\n";
+
+exit;
+```
+
+### 9. Start the Development Server
+
+```bash
+# Start Laravel development server
 php artisan serve
 ```
 
 Visit `http://localhost:8000` to access the application.
+
+### 10. Verify Installation
+
+Run this command to verify all services are properly configured:
+
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan route:list
+```
+
+### Troubleshooting Common Issues
+
+#### "Class not found" errors
+```bash
+composer dump-autoload
+php artisan clear-compiled
+php artisan config:clear
+```
+
+#### "Permission denied" errors
+```bash
+# Linux/macOS
+sudo chmod -R 775 storage bootstrap/cache
+
+# Windows: Run as Administrator
+icacls storage /grant Everyone:F /T
+```
+
+#### Database connection errors
+- Verify database credentials in `.env`
+- Ensure MySQL service is running
+- Check if database exists: `php artisan db:show`
+
+#### Elasticsearch connection errors
+- Verify `ELASTICSEARCH_HOST` and `ELASTICSEARCH_API_KEY`
+- Test connection: `php artisan tinker` then `app(ElasticsearchService::class)->ping()`
+
+#### Node.js/NPM errors
+```bash
+# Clear npm cache
+npm cache clean --force
+
+# Delete node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
 
 ## 🔧 Elasticsearch Cloud Setup
 
@@ -251,14 +481,91 @@ The seeder includes popular APIs like:
 - `GET /api/repository/categories` - Get API categories
 - `POST /api/repository/search` - Search APIs using Elasticsearch
 
-## 🧪 Testing
+## 🧪 Testing the Application
 
-```bash
-# Run PHP tests
-php artisan test
+Once you have APISense up and running, you can test its AI-powered API recommendation features.
 
-# Run with coverage
-php artisan test --coverage
+### Method 1: Natural Language Query
+
+1. **Access the Dashboard**
+   - Navigate to `http://localhost:8000` in your browser
+   - Log in or register for an account
+
+2. **Describe Your Project**
+   - Locate the **"What are you building?"** text area on the dashboard
+   - Describe your project in natural language. For example:
+     - *"I'm building a travel booking app with real-time pricing and weather forecasts"*
+     - *"I need APIs for an e-commerce platform with payment processing and inventory management"*
+     - *"What APIs should I use for a social media analytics dashboard?"*
+
+3. **Generate Recommendations**
+   - Click the **"Generate API Recommendations"** button
+   - Wait for the AI to analyze your requirements (this may take a few seconds)
+
+4. **Review Results**
+   - APISense will display personalized API recommendations
+   - Each recommendation includes:
+     - API name and description
+     - Why it fits your use case
+     - Key features and pricing information
+     - Documentation links
+     - Alternative suggestions
+
+### Method 2: Upload README File
+
+1. **Prepare Your README File**
+   - Have a README.md or project description file ready
+   - The file should contain details about your project requirements, features, and goals
+
+2. **Upload the File**
+   - On the dashboard, locate the **"Upload Project File"** section
+   - Click **"Choose File"** or drag and drop your README.md file
+   - Click **"Upload and Analyze"**
+
+3. **Automatic Analysis**
+   - APISense will automatically extract:
+     - Project requirements
+     - Technical stack preferences
+     - Feature descriptions
+     - Integration needs
+
+4. **Review Recommendations**
+   - The AI will generate tailored API recommendations based on your file
+   - Recommendations are organized by category and relevance
+   - You can save favorite recommendations for future reference
+
+### Tips for Best Results
+
+- **Be Specific**: Include details about your target audience, scale, and specific features
+- **Mention Technologies**: If you're using specific frameworks or languages, include them
+- **List Requirements**: Mention must-have features like authentication, payments, notifications, etc.
+- **Consider Budget**: Mention if you need free/freemium APIs or if budget is not a constraint
+
+### Example Queries
+
+**Travel & Booking:**
+```
+I'm building a travel booking platform that needs flight search, hotel booking, 
+car rentals, and real-time currency conversion. The app will serve international 
+users and needs multi-language support.
+```
+
+**E-commerce:**
+```
+Building an online store with payment processing, inventory management, 
+shipping tracking, and customer notifications via email and SMS.
+```
+
+**Social Media:**
+```
+Creating a social media analytics tool that tracks mentions across Twitter, 
+Instagram, and Facebook, with sentiment analysis and reporting features.
+```
+
+**Healthcare:**
+```
+Developing a telemedicine app with video conferencing, appointment scheduling, 
+prescription management, and HIPAA-compliant data storage.
 ```
 
 ## 🚀 Deployment
