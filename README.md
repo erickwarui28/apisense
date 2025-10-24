@@ -5,8 +5,17 @@
 
 APISense is an AI-powered API recommendation system that leverages **Elasticsearch** and **Google Gemini AI** to intelligently match developers and startups with the right APIs for their specific use cases.
 
+## 🎥 Demo Video
+
+Watch APISense in action:
+
+[![APISense Demo](https://img.youtube.com/vi/nHi9osvOCG8/maxresdefault.jpg)](https://youtu.be/nHi9osvOCG8)
+
+*Click the thumbnail above to watch the full demo video*
+
 ## 📑 Table of Contents
 
+- [Demo Video](#-demo-video)
 - [Features](#-features)
 - [Tech Stack](#️-tech-stack)
 - [Quick Start](#-quick-start)
